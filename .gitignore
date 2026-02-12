@@ -1,0 +1,21 @@
+# Environment variables
+.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Data files
+data/
+
+# IDE files
+.idea/
+.vscode/
+
+# Virtual environment
+venv/
+.env/
+
+# Notion token
+NOTION_TOKEN
+NOTION_PARENT_PAGE_ID
