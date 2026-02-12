@@ -168,43 +168,54 @@ def update_notion_database(data, top_performers):
     notion = Client(auth=NOTION_TOKEN)
     
     # Check if the database already exists
-    databases = notion.search(filter={"property": "object", "value": "database"})
-    database_id = None
-    for db in databases["results"]:
-        if db["parent"]["page_id"] == NOTION_PARENT_PAGE_ID:
-            database_id = db["id"]
-            break
+    try:
+        databases = notion.search(filter={"property": "object", "value": "database"})
+        database_id = None
+        for db in databases.get("results", []):
+            if db.get("parent", {}).get("page_id") == NOTION_PARENT_PAGE_ID:
+                database_id = db["id"]
+                break
+    except Exception as e:
+        print(f"Error searching for existing database: {e}")
+        database_id = None
     
     # Create the database if it doesn't exist
     if not database_id:
-        database = notion.databases.create(
-            parent={"type": "page_id", "page_id": NOTION_PARENT_PAGE_ID},
-            title=[{"type": "text", "text": {"content": "Commodities Data"}}],
-            properties={
-                "Ticker": {"title": {}},
-                "Name": {"rich_text": {}},
-                "Date": {"date": {}},
-                "Price": {"number": {}},
-                "Change": {"number": {}},
-                "Top Performer": {"checkbox": {}},
-            },
-        )
-        database_id = database["id"]
-        print(f"Created Notion database with ID: {database_id}")
+        try:
+            database = notion.databases.create(
+                parent={"type": "page_id", "page_id": NOTION_PARENT_PAGE_ID},
+                title=[{"type": "text", "text": {"content": "Commodities Data"}}],
+                properties={
+                    "Ticker": {"title": {}},
+                    "Name": {"rich_text": {}},
+                    "Date": {"date": {}},
+                    "Price": {"number": {}},
+                    "Change": {"number": {}},
+                    "Top Performer": {"checkbox": {}},
+                },
+            )
+            database_id = database["id"]
+            print(f"Created Notion database with ID: {database_id}")
+        except Exception as e:
+            print(f"Error creating Notion database: {e}")
+            return
     
     # Update the database with the latest data
     for ticker, info in data.items():
-        notion.pages.create(
-            parent={"type": "database_id", "database_id": database_id},
-            properties={
-                "Ticker": {"title": [{"text": {"content": ticker}}]},
-                "Name": {"rich_text": [{"text": {"content": info["name"]}}]},
-                "Date": {"date": {"start": info["date"]}},
-                "Price": {"number": info["price"]},
-                "Change": {"number": info["change"]},
-                "Top Performer": {"checkbox": ticker in top_performers},
-            },
-        )
+        try:
+            notion.pages.create(
+                parent={"type": "database_id", "database_id": database_id},
+                properties={
+                    "Ticker": {"title": [{"text": {"content": ticker}}]},
+                    "Name": {"rich_text": [{"text": {"content": info["name"]}}]},
+                    "Date": {"date": {"start": info["date"]}},
+                    "Price": {"number": info["price"]},
+                    "Change": {"number": info["change"]},
+                    "Top Performer": {"checkbox": ticker in top_performers},
+                },
+            )
+        except Exception as e:
+            print(f"Error creating page for {ticker}: {e}")
     
     print("Notion database updated successfully.")
 
