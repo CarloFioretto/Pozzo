@@ -36,8 +36,16 @@ COMMODITIES = {
 }
 
 def get_yesterday_date():
-    """Return yesterday's date in YYYY-MM-DD format."""
+    """Return yesterday's date in YYYY-MM-DD format.
+    
+    If yesterday is a weekend, return the last trading day (Friday).
+    """
     yesterday = datetime.now() - timedelta(days=1)
+    # If it's Monday, get Friday's data
+    if yesterday.weekday() == 6:  # Sunday
+        yesterday -= timedelta(days=2)
+    elif yesterday.weekday() == 5:  # Saturday
+        yesterday -= timedelta(days=1)
     return yesterday.strftime("%Y-%m-%d")
 
 def fetch_commodities_data():
@@ -159,6 +167,95 @@ def save_data_to_files(data, top_performers):
     df.to_csv(csv_file)
     print(f"Data saved to {csv_file}")
 
+def get_or_create_database(notion):
+    """Get existing database or create a new one with the required schema."""
+    try:
+        databases = notion.search(filter={"property": "object", "value": "database"})
+        for db in databases.get("results", []):
+            if db.get("parent", {}).get("page_id") == NOTION_PARENT_PAGE_ID:
+                print(f"Found existing database with ID: {db['id']}")
+                return db["id"]
+    except Exception as e:
+        print(f"Error searching for existing database: {e}")
+    
+    # Create the database if it doesn't exist
+    try:
+        database = notion.databases.create(
+            parent={"type": "page_id", "page_id": NOTION_PARENT_PAGE_ID},
+            title=[{"type": "text", "text": {"content": "Commodities Data"}}],
+            properties={
+                "Ticker": {"title": {}},
+                "Name": {"rich_text": {}},
+                "Date": {"date": {}},
+                "Price": {"number": {}},
+                "Change": {"number": {}},
+                "Top Performer": {"checkbox": {}},
+            },
+        )
+        database_id = database["id"]
+        print(f"Created Notion database with ID: {database_id}")
+        return database_id
+    except Exception as e:
+        print(f"Error creating Notion database: {e}")
+        return None
+
+
+def query_existing_entry(notion, database_id, ticker, date):
+    """Query for an existing entry by ticker and date."""
+    try:
+        response = notion.databases.query(
+            database_id=database_id,
+            filter={
+                "and": [
+                    {"property": "Ticker", "title": {"equals": ticker}},
+                    {"property": "Date", "date": {"equals": date}},
+                ]
+            },
+        )
+        results = response.get("results", [])
+        return results[0]["id"] if results else None
+    except Exception as e:
+        print(f"Error querying for existing entry: {e}")
+        return None
+
+
+def upsert_database_entry(notion, database_id, ticker, info, is_top_performer):
+    """Create or update a database entry."""
+    page_properties = {
+        "Ticker": {"title": [{"text": {"content": ticker}}]},
+        "Name": {"rich_text": [{"text": {"content": info["name"]}}]},
+        "Date": {"date": {"start": info["date"]}},
+        "Price": {"number": round(info["price"], 2)},
+        "Change": {"number": round(info["change"], 4)},
+        "Top Performer": {"checkbox": is_top_performer},
+    }
+    
+    # Check for existing entry
+    existing_page_id = query_existing_entry(notion, database_id, ticker, info["date"])
+    
+    if existing_page_id:
+        # Update existing entry
+        try:
+            notion.pages.update(page_id=existing_page_id, properties=page_properties)
+            print(f"Updated entry for {ticker}")
+            return True
+        except Exception as e:
+            print(f"Error updating page for {ticker}: {e}")
+            return False
+    else:
+        # Create new entry
+        try:
+            notion.pages.create(
+                parent={"type": "database_id", "database_id": database_id},
+                properties=page_properties,
+            )
+            print(f"Created entry for {ticker}")
+            return True
+        except Exception as e:
+            print(f"Error creating page for {ticker}: {e}")
+            return False
+
+
 def update_notion_database(data, top_performers):
     """Create or update a Notion database with the commodities data."""
     if not NOTION_TOKEN or not NOTION_PARENT_PAGE_ID:
@@ -167,57 +264,27 @@ def update_notion_database(data, top_performers):
     
     notion = Client(auth=NOTION_TOKEN)
     
-    # Check if the database already exists
-    try:
-        databases = notion.search(filter={"property": "object", "value": "database"})
-        database_id = None
-        for db in databases.get("results", []):
-            if db.get("parent", {}).get("page_id") == NOTION_PARENT_PAGE_ID:
-                database_id = db["id"]
-                break
-    except Exception as e:
-        print(f"Error searching for existing database: {e}")
-        database_id = None
-    
-    # Create the database if it doesn't exist
+    # Get or create the database
+    database_id = get_or_create_database(notion)
     if not database_id:
-        try:
-            database = notion.databases.create(
-                parent={"type": "page_id", "page_id": NOTION_PARENT_PAGE_ID},
-                title=[{"type": "text", "text": {"content": "Commodities Data"}}],
-                properties={
-                    "Ticker": {"title": {}},
-                    "Name": {"rich_text": {}},
-                    "Date": {"date": {}},
-                    "Price": {"number": {}},
-                    "Change": {"number": {}},
-                    "Top Performer": {"checkbox": {}},
-                },
-            )
-            database_id = database["id"]
-            print(f"Created Notion database with ID: {database_id}")
-        except Exception as e:
-            print(f"Error creating Notion database: {e}")
-            return
+        print("Failed to get or create database. Exiting.")
+        return
     
-    # Update the database with the latest data
+    # Upsert data entries
+    success_count = 0
     for ticker, info in data.items():
-        try:
-            notion.pages.create(
-                parent={"type": "database_id", "database_id": database_id},
-                properties={
-                    "Ticker": {"title": [{"text": {"content": ticker}}]},
-                    "Name": {"rich_text": [{"text": {"content": info["name"]}}]},
-                    "Date": {"date": {"start": info["date"]}},
-                    "Price": {"number": info["price"]},
-                    "Change": {"number": info["change"]},
-                    "Top Performer": {"checkbox": ticker in top_performers},
-                },
-            )
-        except Exception as e:
-            print(f"Error creating page for {ticker}: {e}")
+        if upsert_database_entry(notion, database_id, ticker, info, ticker in top_performers):
+            success_count += 1
     
-    print("Notion database updated successfully.")
+    print(f"Notion database updated successfully. {success_count}/{len(data)} entries processed.")
+    
+    # Note: Notion API does not support programmatic creation of filtered views.
+    # The "Top Performers" view should be created manually in Notion:
+    # 1. Open the database in Notion
+    # 2. Click "+ New" next to existing views
+    # 3. Select a view type (e.g., Table)
+    # 4. Name it "Top Performers"
+    # 5. Add filter: "Top Performer" is checked
 
 def main():
     """Main function to run the commodities data pipeline."""
