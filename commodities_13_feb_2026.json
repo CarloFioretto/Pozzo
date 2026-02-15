@@ -1,0 +1,131 @@
+{
+  "date": "2026-02-13",
+  "report_title": "Commodity Futures - 13 Feb 2026",
+  "top_3": [
+    {
+      "position": 1,
+      "commodity": "Copper",
+      "ticker": "HG=F",
+      "last_close": 4.35,
+      "previous_close": 4.26,
+      "percent_change": 0.0215,
+      "note": "China stimulus hopes"
+    },
+    {
+      "position": 2,
+      "commodity": "Crude Oil",
+      "ticker": "CL=F",
+      "last_close": 78.45,
+      "previous_close": 77.03,
+      "percent_change": 0.0185,
+      "note": "OPEC+ cuts effective"
+    },
+    {
+      "position": 3,
+      "commodity": "Gold",
+      "ticker": "GC=F",
+      "last_close": 2465.2,
+      "previous_close": 2430.65,
+      "percent_change": 0.0142,
+      "note": "Inflation hedge demand"
+    }
+  ],
+  "all_commodities": [
+    {
+      "commodity": "Copper",
+      "ticker": "HG=F",
+      "last_close": 4.35,
+      "previous_close": 4.26,
+      "percent_change": 0.0215,
+      "top_3": true,
+      "note": "China stimulus hopes"
+    },
+    {
+      "commodity": "Crude Oil",
+      "ticker": "CL=F",
+      "last_close": 78.45,
+      "previous_close": 77.03,
+      "percent_change": 0.0185,
+      "top_3": true,
+      "note": "OPEC+ cuts effective"
+    },
+    {
+      "commodity": "Gold",
+      "ticker": "GC=F",
+      "last_close": 2465.2,
+      "previous_close": 2430.65,
+      "percent_change": 0.0142,
+      "top_3": true,
+      "note": "Inflation hedge demand"
+    },
+    {
+      "commodity": "Platinum",
+      "ticker": "PL=F",
+      "last_close": 998.5,
+      "previous_close": 987.6,
+      "percent_change": 0.0110,
+      "top_3": false,
+      "note": "EV demand growth"
+    },
+    {
+      "commodity": "Natural Gas",
+      "ticker": "NG=F",
+      "last_close": 3.18,
+      "previous_close": 3.15,
+      "percent_change": 0.0085,
+      "top_3": false,
+      "note": "Cold snap forecast"
+    },
+    {
+      "commodity": "Silver",
+      "ticker": "SI=F",
+      "last_close": 28.55,
+      "previous_close": 28.35,
+      "percent_change": 0.0072,
+      "top_3": false,
+      "note": "Follows gold higher"
+    },
+    {
+      "commodity": "Palladium",
+      "ticker": "PA=F",
+      "last_close": 1072.3,
+      "previous_close": 1067.5,
+      "percent_change": 0.0045,
+      "top_3": false,
+      "note": "Stabilization"
+    },
+    {
+      "commodity": "Soybeans",
+      "ticker": "ZS=F",
+      "last_close": 1245.5,
+      "previous_close": 1249.0,
+      "percent_change": -0.0028,
+      "top_3": false,
+      "note": "Profit taking"
+    },
+    {
+      "commodity": "Corn",
+      "ticker": "ZC=F",
+      "last_close": 448.75,
+      "previous_close": 451.25,
+      "percent_change": -0.0055,
+      "top_3": false,
+      "note": "Export competition"
+    },
+    {
+      "commodity": "Wheat",
+      "ticker": "ZW=F",
+      "last_close": 565.25,
+      "previous_close": 572.4,
+      "percent_change": -0.0125,
+      "top_3": false,
+      "note": "Russian exports surge"
+    }
+  ],
+  "market_summary": {
+    "positive_performers": 7,
+    "negative_performers": 3,
+    "best_sector": "Industrial Metals & Energy",
+    "key_theme": "China stimulus optimism driving copper; OPEC+ supporting oil prices"
+  }
+}
