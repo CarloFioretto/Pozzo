@@ -25,6 +25,10 @@ This project implements a Python pipeline that pulls yesterday's commodities dat
    ```env
    NOTION_TOKEN=your_notion_api_token_here
    NOTION_PARENT_PAGE_ID=your_notion_parent_page_id_here
+   
+   # Optional: Override the date (YYYY-MM-DD format)
+   # If not set, defaults to yesterday with automatic weekend handling
+   # COMMODITIES_DATE=2026-02-13
    ```
 
 ## Usage
@@ -34,11 +38,32 @@ Run the pipeline:
 python src/commodities_pipeline.py
 ```
 
+**Date Override Options:**
+
+You can specify a different date using either:
+
+1. **CLI argument** (highest priority):
+   ```bash
+   python src/commodities_pipeline.py --date 2026-02-13
+   ```
+
+2. **Environment variable**:
+   ```bash
+   COMMODITIES_DATE=2026-02-13 python src/commodities_pipeline.py
+   ```
+
+3. **Both (CLI takes precedence)**:
+   ```bash
+   COMMODITIES_DATE=2026-02-12 python src/commodities_pipeline.py --date 2026-02-13
+   ```
+   This will use 2026-02-13 (from CLI), not 2026-02-12 (from env var).
+
 **Note**: If `yfinance` fails to fetch data (e.g., due to market holidays or API issues), the script will use mock data for testing purposes. This ensures the pipeline can be tested even when live data is unavailable.
 
 ## Outputs
 
-- **Raw Data**: Saved in the `data/` directory as `raw_YYYY-MM-DD.json` and `raw_YYYY-MM-DD.csv`.
+- **Primary Data Files**: Saved in the `data/` directory as `data_YYYY-MM-DD.json` and `data_YYYY-MM-DD.csv`.
+- **Raw Data Files**: Also saved as `raw_YYYY-MM-DD.json` and `raw_YYYY-MM-DD.csv` for backwards compatibility.
 - **Markdown Report**: Generated in the `data/` directory as `report_commodities_YYYY-MM-DD.md` with detailed insights.
 - **Notion Database**: Updated with the latest commodities data and top performers tagged.
 

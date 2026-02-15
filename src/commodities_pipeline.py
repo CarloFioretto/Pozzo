@@ -7,7 +7,9 @@ saves the raw data to JSON/CSV, and updates a Notion database with the results.
 """
 
 import os
+import sys
 import json
+import argparse
 import pandas as pd
 import yfinance as yf
 from datetime import datetime, timedelta
@@ -49,11 +51,42 @@ COMMODITIES = {
     "ZW=F": "Wheat",
 }
 
-def get_yesterday_date():
-    """Return yesterday's date in YYYY-MM-DD format.
+def get_target_date(override_date=None):
+    """Return the target date in YYYY-MM-DD format.
     
-    If yesterday is a weekend, return the last trading day (Friday).
+    Priority:
+    1. CLI argument (override_date)
+    2. Environment variable (COMMODITIES_DATE)
+    3. Default: yesterday (with weekend handling)
+    
+    Args:
+        override_date: Optional date string (YYYY-MM-DD) from CLI
+        
+    Returns:
+        str: Date in YYYY-MM-DD format
     """
+    # Check CLI argument first
+    if override_date:
+        try:
+            # Validate date format
+            datetime.strptime(override_date, "%Y-%m-%d")
+            return override_date
+        except ValueError:
+            print(f"Error: Invalid date format '{override_date}'. Expected YYYY-MM-DD")
+            sys.exit(1)
+    
+    # Check environment variable
+    env_date = os.getenv("COMMODITIES_DATE")
+    if env_date:
+        try:
+            # Validate date format
+            datetime.strptime(env_date, "%Y-%m-%d")
+            return env_date
+        except ValueError:
+            print(f"Error: Invalid date format in COMMODITIES_DATE '{env_date}'. Expected YYYY-MM-DD")
+            sys.exit(1)
+    
+    # Default: yesterday with weekend handling
     yesterday = datetime.now() - timedelta(days=1)
     # If it's Monday, get Friday's data
     if yesterday.weekday() == 6:  # Sunday
@@ -62,9 +95,8 @@ def get_yesterday_date():
         yesterday -= timedelta(days=1)
     return yesterday.strftime("%Y-%m-%d")
 
-def fetch_commodities_data():
-    """Fetch yesterday's commodities data using yfinance or mock data."""
-    yesterday = get_yesterday_date()
+def fetch_commodities_data(target_date):
+    """Fetch commodities data for the specified date using yfinance or mock data."""
     data = {}
 
     # Try to fetch data using yfinance
@@ -79,7 +111,7 @@ def fetch_commodities_data():
                 data[ticker] = {
                     "commodity": name,
                     "ticker": ticker,
-                    "date": yesterday,
+                    "date": target_date,
                     "last_close": current_close,
                     "previous_close": prev_close,
                     "percent_change": round(change, 4),
@@ -97,7 +129,7 @@ def fetch_commodities_data():
             "GC=F": {
                 "commodity": "Gold",
                 "ticker": "GC=F",
-                "date": yesterday,
+                "date": target_date,
                 "last_close": 1950.50,
                 "previous_close": 1927.10,
                 "percent_change": 0.0125,
@@ -106,7 +138,7 @@ def fetch_commodities_data():
             "SI=F": {
                 "commodity": "Silver",
                 "ticker": "SI=F",
-                "date": yesterday,
+                "date": target_date,
                 "last_close": 25.75,
                 "previous_close": 25.18,
                 "percent_change": 0.023,
@@ -115,7 +147,7 @@ def fetch_commodities_data():
             "PL=F": {
                 "commodity": "Platinum",
                 "ticker": "PL=F",
-                "date": yesterday,
+                "date": target_date,
                 "last_close": 1050.25,
                 "previous_close": 1058.18,
                 "percent_change": -0.0075,
@@ -124,7 +156,7 @@ def fetch_commodities_data():
             "PA=F": {
                 "commodity": "Palladium",
                 "ticker": "PA=F",
-                "date": yesterday,
+                "date": target_date,
                 "last_close": 1200.75,
                 "previous_close": 1194.77,
                 "percent_change": 0.005,
@@ -133,7 +165,7 @@ def fetch_commodities_data():
             "CL=F": {
                 "commodity": "Crude Oil",
                 "ticker": "CL=F",
-                "date": yesterday,
+                "date": target_date,
                 "last_close": 85.30,
                 "previous_close": 83.79,
                 "percent_change": 0.018,
@@ -142,7 +174,7 @@ def fetch_commodities_data():
             "NG=F": {
                 "commodity": "Natural Gas",
                 "ticker": "NG=F",
-                "date": yesterday,
+                "date": target_date,
                 "last_close": 3.25,
                 "previous_close": 3.29,
                 "percent_change": -0.012,
@@ -151,7 +183,7 @@ def fetch_commodities_data():
             "HG=F": {
                 "commodity": "Copper",
                 "ticker": "HG=F",
-                "date": yesterday,
+                "date": target_date,
                 "last_close": 4.15,
                 "previous_close": 4.11,
                 "percent_change": 0.009,
@@ -160,7 +192,7 @@ def fetch_commodities_data():
             "ZC=F": {
                 "commodity": "Corn",
                 "ticker": "ZC=F",
-                "date": yesterday,
+                "date": target_date,
                 "last_close": 5.80,
                 "previous_close": 5.78,
                 "percent_change": 0.003,
@@ -169,7 +201,7 @@ def fetch_commodities_data():
             "ZS=F": {
                 "commodity": "Soybeans",
                 "ticker": "ZS=F",
-                "date": yesterday,
+                "date": target_date,
                 "last_close": 13.50,
                 "previous_close": 13.35,
                 "percent_change": 0.011,
@@ -178,7 +210,7 @@ def fetch_commodities_data():
             "ZW=F": {
                 "commodity": "Wheat",
                 "ticker": "ZW=F",
-                "date": yesterday,
+                "date": target_date,
                 "last_close": 6.20,
                 "previous_close": 6.22,
                 "percent_change": -0.004,
@@ -231,7 +263,7 @@ def generate_market_summary(data):
 
 def save_data_to_files(data, top_performers):
     """Save raw data to JSON and CSV files in the expected format."""
-    yesterday = get_yesterday_date()
+    target_date = data[list(data.keys())[0]]["date"]
 
     # Prepare all commodities list
     all_commodities = []
@@ -259,8 +291,8 @@ def save_data_to_files(data, top_performers):
 
     # Create the detailed JSON structure
     json_data = {
-        "date": yesterday,
-        "report_title": f"Commodity Futures - {yesterday}",
+        "date": target_date,
+        "report_title": f"Commodity Futures - {target_date}",
         "top_3": top_3_list,
         "all_commodities": all_commodities,
         "market_summary": market_summary,
@@ -269,19 +301,25 @@ def save_data_to_files(data, top_performers):
     # Ensure data directory exists
     os.makedirs("data", exist_ok=True)
 
-    # Save to JSON
-    json_file = f"data/raw_{yesterday}.json"
+    # Save to JSON (data_ prefix - primary output)
+    json_file = f"data/data_{target_date}.json"
     with open(json_file, "w") as f:
         json.dump(json_data, f, indent=4)
     print(f"Data saved to {json_file}")
 
-    # Save to CSV with proper format
+    # Save to JSON (raw_ prefix - also available for backwards compatibility)
+    raw_json_file = f"data/raw_{target_date}.json"
+    with open(raw_json_file, "w") as f:
+        json.dump(json_data, f, indent=4)
+    print(f"Data saved to {raw_json_file}")
+
+    # Save to CSV with proper format (data_ prefix)
     csv_data = []
     for item in all_commodities:
         csv_data.append({
             "Commodity": item["commodity"],
             "Ticker": item["ticker"],
-            "Date": yesterday,
+            "Date": target_date,
             "Last Close": item["last_close"],
             "Previous Close": item["previous_close"],
             "% Change": round(item["percent_change"], 4),
@@ -290,9 +328,14 @@ def save_data_to_files(data, top_performers):
         })
 
     df = pd.DataFrame(csv_data)
-    csv_file = f"data/raw_{yesterday}.csv"
+    csv_file = f"data/data_{target_date}.csv"
     df.to_csv(csv_file, index=False)
     print(f"Data saved to {csv_file}")
+
+    # Save to CSV (raw_ prefix - also available for backwards compatibility)
+    raw_csv_file = f"data/raw_{target_date}.csv"
+    df.to_csv(raw_csv_file, index=False)
+    print(f"Data saved to {raw_csv_file}")
 
     return json_data
 
@@ -566,8 +609,40 @@ def update_notion_database(data, top_performers):
 
 def main():
     """Main function to run the commodities data pipeline."""
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(
+        description="Fetch and process commodities data for a specified date",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Run for yesterday (default)
+  python src/commodities_pipeline.py
+  
+  # Run for a specific date
+  python src/commodities_pipeline.py --date 2026-02-13
+  
+  # Run with environment variable
+  COMMODITIES_DATE=2026-02-13 python src/commodities_pipeline.py
+  
+  # CLI argument takes precedence over environment variable
+  COMMODITIES_DATE=2026-02-12 python src/commodities_pipeline.py --date 2026-02-13
+        """
+    )
+    
+    parser.add_argument(
+        "--date",
+        type=str,
+        help="Target date in YYYY-MM-DD format (overrides environment variable COMMODITIES_DATE)"
+    )
+    
+    args = parser.parse_args()
+    
+    # Get the target date
+    target_date = get_target_date(args.date)
+    print(f"Processing commodities data for: {target_date}")
+    
     print("Fetching commodities data...")
-    data = fetch_commodities_data()
+    data = fetch_commodities_data(target_date)
 
     if not data:
         print("No data fetched. Exiting.")
