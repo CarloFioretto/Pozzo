@@ -39,6 +39,7 @@ python src/commodities_pipeline.py
 ## Outputs
 
 - **Raw Data**: Saved in the `data/` directory as `raw_YYYY-MM-DD.json` and `raw_YYYY-MM-DD.csv`.
+- **Markdown Report**: Generated in the `data/` directory as `report_commodities_YYYY-MM-DD.md` with detailed insights.
 - **Notion Database**: Updated with the latest commodities data and top performers tagged.
 
 ### Weekend Handling
